@@ -1,0 +1,19 @@
+name: (Development) Enroll your AWS Role for Shared Runner Retrieval
+description: This issue triggers a workflow that enrolls your AWS role for use with shared runners.  This workflow requests approval from an administrator.
+title: AWS Role Enrollment Dev
+labels: 'role-enrollment-prod'
+assignees: 
+  - nfurnosanofi
+body:
+- type: input
+  id: email
+  attributes:
+    label: "Your Sanofi Email Address"
+    description: "The secret token generated for this aws role will be emailed to this address."
+    placeholder: "noreply@sanofi.com"
+- type: input
+  id: rolearn
+  attributes:
+    label: "AWS Role ARN Path"
+    description: "The ARN Path of the role you want to enroll for token vending machine use."
+    placeholder: "arn:aws:iam::<account id here>:role/<Role Name Here>"

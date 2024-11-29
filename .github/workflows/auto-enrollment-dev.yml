@@ -1,0 +1,67 @@
+# This action triggers when someone creates an issue titled 'AWS Role Enrollment Dev'
+# The action will attempt to get the information from the issue and use it to onboard the aws role into the TVM
+
+name: auto-enrollment-dev
+
+# Controls when the workflow will run
+on:
+  issues:
+    types: [opened, reopened]
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+
+  autoEnrollmentExecution_dev:
+    #needs: autoEnrollmentValidation
+    environment:
+      name: development
+    # The type of runner that the job will run on
+    #runs-on: ['atmos-aws-arc-runner-set']
+    runs-on: ['devops-dev']
+
+    if: github.event.issue.title  == 'AWS Role Enrollment Dev'
+    container:
+        #image: alpine:latest
+        image: sanofi-docker-atmos-local.jfrog.io/furno_devops_v02:latest
+        credentials:
+        # the artifactory user name is the complete email address of the user in lowercase, example: gitlab-automation@sanofi.com
+          username: ${{ secrets.DOCKER_USER}}
+        # the artifactory token is obtained from the artifactory user's profile page and is used as-is (ie. no base64 encoding)
+          password: ${{ secrets.DOCKER_TOKEN}}
+
+    env:
+      TF_VAR_ADMINKEY: ${{ secrets.TF_VAR_ADMINKEY}}
+      ENROLLMENT_EVENT: ${{ github.event_name }}
+      ENROLLMENT_TITLE: ${{ github.event.issue.title }}
+      ENROLLMENT_NUMBER: ${{ github.event.issue.number }}
+      ENROLLMENT_MESSAGE: ${{ github.event.issue.body }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      ISSUE_REPO_URL: ${{ github.event.issue.repository_url }}
+      REPO_NAME: ${{ github.event.repository.full_name }}
+      REPO_URL: ${{ github.event.repository.url }}
+      HTTP_PROXY: ''
+      HTTPS_PROXY: ''
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      - uses: Sanofi-InnerSource/github-actions-library/setup-root-ca@main
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v4
+
+      # Assume the aws role and set up the credentials for awscli/terraform
+      - name: validate email address and arn
+        run: |
+          echo 'github.event_name: ${{ github.event_name }}'
+          echo 'github.head_ref: ${{ github.head_ref }}'
+          echo 'github.event.issue.title: ${{ github.event.issue.title }}'
+          echo 'github.event.issue.number: ${{ github.event.issue.number }}'
+          echo 'github.event.issue.body: ${{ github.event.issue.body }}'
+          echo 'github.event.issue.repository_url: ${{ github.event.issue.repository_url }}'
+          echo 'github.event.repository.full_name: ${{ github.event.repository.full_name }}'
+          echo 'github.event.repository.url: ${{ github.event.repository.url }}'
+          chmod +x ./assume_role.sh
+          . ./assume_role.sh "nfurno-devops-test" "CE_AppAdminRunner"
+          cd automation
+          python ./enrollment.py -v
+          
+

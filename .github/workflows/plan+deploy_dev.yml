@@ -1,0 +1,52 @@
+# This is a basic workflow to help you get started with Actions
+
+name: plan_and_deploy_dev
+
+# Controls when the workflow will run
+on:
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  plan_and_deploy_dev:
+    # The type of runner that the job will run on
+    environment:
+      name: aws-development
+    runs-on: ['devops-dev']
+    container:
+        #image: alpine:latest
+        image: sanofi-docker-atmos-local.jfrog.io/furno_devops_v03:latest
+        credentials:
+        # the artifactory user name is the complete email address of the user in lowercase, example: gitlab-automation@sanofi.com
+          username: ${{ secrets.DOCKER_USER}}
+        # the artifactory token is obtained from the artifactory user's profile page and is used as-is (ie. no base64 encoding)
+          password: ${{ secrets.DOCKER_TOKEN}}
+    
+    env:
+      PLAN: 'create.plan'
+      DESTROYPLAN: 'destroy.plan'
+      TF_VAR_ADMINKEY: ${{ secrets.TF_VAR_ADMINKEY}}
+      TF_VAR_SMTP_PASSWORD: ${{ secrets.TF_VAR_SMTP_PASSWORD}}
+      
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v4
+
+      # Assume the aws role and set up the credentials for awscli/terraform
+      - name: assume role and run terraform plan
+        run: |
+          chmod +x ./assume_role.sh
+          . ./assume_role.sh "nfurno-devops-test" "CE_AppAdminRunner"
+          cd tvm_lambda
+          cp --verbose vars/variables-devops-dev-aws.tf variables-devops-dev-dev.tf
+          cp --verbose features/lambda_ce.tf lambda_ce.tf
+          ls -la
+          terraform init -backend-config="backend/backend-devops-dev-aws.tf"
+          terraform validate
+          terraform plan -out $PLAN
+          terraform apply -auto-approve $PLAN 
+          
+

@@ -1,0 +1,26 @@
+name: Enroll your AWS Role for Shared Runner Retrieval
+description: This issue triggers a workflow that enrolls your AWS role for use with shared runners.  This workflow requests approval from an administrator.
+title: AWS Role Enrollment
+labels: 'role-enrollment-prod'
+assignees: 
+  - nfurnosanofi
+  - mcdonaldts
+body:
+- type: input
+  id: email
+  attributes:
+    label: "Your Sanofi Email Address"
+    description: "The secret token generated for this aws role will be emailed to this address."
+    placeholder: "noreply@sanofi.com"
+- type: input
+  id: rolearn
+  attributes:
+    label: "AWS Role ARN Path"
+    description: "The ARN Path of the role you want to enroll for token vending machine use."
+    placeholder: "arn:aws:iam::<account id here>:role/<Role Name Here>"
+- type: checkboxes
+  attributes:
+    label: Wildcard Role
+    description: Wildcard roles are enrolled with the symbol @ where the account number would be in the ARN. This allows one registration for multiple rolls across multiple accounts.
+    options:
+      - label: This is a Wildcard Role

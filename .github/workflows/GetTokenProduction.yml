@@ -1,0 +1,52 @@
+# This is a basic workflow to help you get started with Actions
+
+name: GetToken
+
+# Controls when the workflow will run
+on:
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_call:
+    inputs:
+      RoleARN:
+        required: true
+        type: string
+    secrets:
+      EntityID:
+        required: true
+      TvmToken:
+        required: true
+    outputs:
+      TokenJSON:
+        description: "A json string containing the result of a token vending machine request"
+        value: ${{ jobs.get_token.outputs.TokenJSON }}
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  get_token:
+    # The type of runner that the job will run on
+    #runs-on: [self-hosted, eccsdevops-aws-dev]
+    runs-on: [self-hosted, aws-devops-production]
+    container:
+        #image: alpine:latest
+        image: sanofi-docker-atmos-local.jfrog.io/furno_devops_v03:latest
+        credentials:
+        # the artifactory user name is the complete email address of the user in lowercase, example: gitlab-automation@sanofi.com
+          username: ${{ secrets.DOCKER_USER}}
+        # the artifactory token is obtained from the artifactory user's profile page and is used as-is (ie. no base64 encoding)
+          password: ${{ secrets.DOCKER_TOKEN}}
+    env:
+      #PLAN: 'create.plan'
+      #DESTROYPLAN: 'destroy.plan'
+      #TF_VAR_ADMINKEY: ${{ secrets.TF_VAR_ADMINKEY}}
+      #TF_VAR_IAM_ENTITYID: ${{ secrets.IAM_ENTITY}}
+      #TF_VAR_IAM_WILDCARDENTITYID: ${{ secrets.IAM_WILDCARDENTITY}}
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Assume the aws role and set up the credentials for awscli/terraform
+      - name: assume role and call tvm
+        run: |
+          aws lambda invoke --function-name arn:aws:lambda:eu-west-1:095208641432:function:App_RoleRetriever --payload '{"action": "getrole", "token": "${{ secrets.IAM_TOKEN}}", "role": "arn:aws:iam::230559371484:role/App_token_vending_machine_target", "externalid": "${{ secrets.IAM_ENTITY}}", "repo": "${{ github.repository.repository }}", "actor": "${{ github.actor }}"}' --region eu-west-1 response.json
+          export AWS_ACCESS_KEY_ID=$(cat response.json | jq -r . | jq .AccessKeyId | xargs)
+          export AWS_SECRET_ACCESS_KEY=$(cat response.json | jq -r . | jq .SecretAccessKey | xargs)
+          export AWS_SESSION_TOKEN=$(cat response.json | jq -r . | jq .SessionToken | xargs)
+          export AWS_EXPIRATION=$(cat response.json | jq -r . | jq .Expiration | xargs)
